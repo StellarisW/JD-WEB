@@ -1,0 +1,87 @@
+app:
+  domain: localhost
+  pageSize: 2
+  PrefixUrl:  http://127.0.0.1:8080
+
+zap:
+  format: 'console'  # console:普通输出格式 json:json输出格式
+  director: 'log' # 日志文件输出位置
+  show-line: true
+  encode-level: 'CapitalLevelEncoder'
+  encode-caller: 'ShortCallerEncoder' # FullCallerEncoder
+  stacktrace-key: 'stacktrace'
+
+# Mysql服务器设置
+mysql:
+  path: xxx
+  port: xxx
+  config: '' # 高级配置
+  db-name: xxx
+  username: xxx
+  password: xxx
+  max-idle-conns: 10 # 最大空闲连接数
+  max-open-conns: 100 # 最大连接数
+#  log-mode: false # 启动Gorm全局日志
+  log-zap: false # 是否通过Zap写入日志文件
+
+# Redis服务器设置
+redis:
+  addr: xxx # 服务器地址
+  password: xxx # 密码
+  db: 0 # 数据库序号
+  pool-size: 10000 # 连接池大小
+
+# Web服务器设置
+server:
+  env: 'public'  # 使用 `develop" 跳过鉴权
+  mode:  debug      # debug or release
+  port:  8080
+  read-timeout:  60
+  write-timeout:  60
+
+secret:
+  common: '还是会想你'
+  private: xxx
+  jwt: '123123123123'
+
+cookie:
+  max_age: 604800
+  secure: false
+  httponly: true
+
+# 跨域配置
+# 需要配合 server/initialize/router.go#L32 使用
+cors:
+  mode: whitelist # allow-all: 放行全部; whitelist: 白名单模式(来自白名单内域名的请求添加cors头); strict-whitelist: 严格白名单模式,(白名单外的请求一律拒绝)
+  whitelist:
+    - allow-origin: example1.com
+      allow-headers: content-type
+      allow-methods: GET, POST
+      expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type
+      allow-credentials: true # 布尔值
+    - allow-origin: example2.com
+      allow-headers: content-type
+      allow-methods: GET, POST
+      expose-headers: Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type
+      allow-credentials: true # 布尔值
+
+# 用户认证机制配置
+auth:
+  # 图形验证码
+  captcha:
+    key-long: 6
+    img-width: 150
+    img-height: 50
+  oauth:
+    clientid: xxx
+    clientsecret: xxx
+  jwt:
+    expires-time: 604800
+    buffer-time: 86400
+    issuer: 'stellaris.wang'
+
+local:
+  path: 'uploads/file'
+
+
+

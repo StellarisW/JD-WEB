@@ -1,0 +1,85 @@
+{{define "collect.tmpl"}}
+    {{template "page_header.tmpl" .}}
+    {{template "banner.tmpl" .}}
+
+    <script src="/resource/frontend/js/jqPaginator.js"></script>
+    <link rel="stylesheet" href="/resource/frontend/css/order.css"/>
+
+    <!-- self_info -->
+    <div class="grzxbj">
+        <div class="selfinfo center">
+            <div class="lfnav fl">
+                <div class="ddzx">用户中心</div>
+                <div class="subddzx">
+                    {{template "user_left.tmpl" .}}
+                </div>
+            </div>
+            <div class="rtcont fr">
+                <h1>我的收藏</h1>
+                <div class="uc-content-box">
+                    <div class="box-hd">
+                        <div class="more clearfix">
+                            <ul class="filter-list J_orderType">
+                                <li class="first active"><a href="/user/order">全部收藏商品</a></li>
+                            </ul>
+                            <form id="J_orderSearchForm" class="search-form clearfix"
+                                  action="/user/collect" method="get">
+                                <input class="search-text" type="search" id="J_orderSearchKeywords"
+                                       name="keywords"
+                                       autocomplete="off" placeholder="输入商品名称">
+                                <input type="submit" class="search-btn iconfont" value="搜索">
+                            </form>
+                        </div>
+                    </div>
+                    {{if .product}}
+                        <div class="box-bd">
+                            <table class="table">
+                                {{range $key,$value := .product}}
+                                    <tr>
+                                        <td colspan="2">
+                                                <div class="order-info clearfix">
+                                                    <div class="col_pic">
+                                                        <img src="{{$value.ProductImg}}"/>
+                                                    </div>
+                                                    <div class="col_title">
+                                                        <p>{{$value.Title}}</p>
+                                                        <p>{{$value.Price}}元</p>
+                                                    </div>
+                                                </div>
+                                        </td>
+                                    </tr>
+                                {{end}}
+                            </table>
+                            <div id="page" class="pagination fr"></div>
+                        </div>
+                    {{else}}
+                        <p style="text-align:center; padding-top:100px;">没有查找到收藏商品</p>
+                    {{end}}
+                </div>
+                <script>
+                    $('#page').jqPaginator({
+                        totalPages: {{.totalPages}},
+                        visiblePages: 8,
+                        currentPage: {{.page}},
+                        onPageChange: function (num, type) {
+                            if (type == 'change') {
+                                location.href = "/user/collect?page=" + num + "&keywords="+{{.keywords}}+
+                                "&order_status=" +{{.orderStatus}};
+                            }
+                        }
+                    });
+                </script>
+            </div>
+            <div class="clear"></div>
+        </div>
+    </div>
+    <!-- self_info -->
+
+    <footer class="mt20 center">
+        <div class="mt20">JD商城|隐私政策|Select Region</div>
+        <div>JD商城 蜀ICP证xxxxxxx号 蜀ICP备xxxxxxxxxxx号 蜀公网安备xxxxxxxxxxxxx号</div>
+    </footer>
+    </body>
+
+    </html>
+{{end}}

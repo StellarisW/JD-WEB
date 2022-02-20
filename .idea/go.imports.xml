@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoImports">
+    <option name="excludedPackages">
+      <array>
+        <option value="github.com/LyricTian/gin-admin/v8/pkg/auth/jwtauth/store/redis" />
+        <option value="github.com/LyricTian/gin-admin/v8/pkg/errors" />
+        <option value="github.com/casbin/casbin/v2/log" />
+        <option value="github.com/songzhibin97/gkit/errors" />
+        <option value="github.com/swaggo/swag/testdata" />
+      </array>
+    </option>
+  </component>
+</project>

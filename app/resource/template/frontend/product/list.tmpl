@@ -1,0 +1,47 @@
+{{define "product/list.tmpl"}}
+{{template "page_header.tmpl" .}}
+{{template "banner.tmpl" .}}
+<script type="text/javascript" src="/resource/backend/js/jqPaginator.js"></script>
+<link rel="stylesheet" href="/resource/backend/bootstrap/css/bootstrap.css">
+<!-- start 单品 -->
+<div class="singleproduct center">
+    <div class="main center mb20">
+        {{range $key,$value := .productList}}
+            <div class="star fl mb20" style="border:2px solid #fff;width:230px;cursor:pointer;"
+                 onmouseout="this.style.border='2px solid #fff'" onmousemove="this.style.border='2px solid red'">
+                <div class="sub_star">
+                    <a href="item_{{$value.Id}}.html" target="_blank">
+                        <img src="{{$value.ProductImg}}" alt="{{$value.Title}}"/>
+                    </a>
+                </div>
+                <div class="brand"><a href="item_{{$value.Id}}.html" target="_blank">{{$value.Title}}</a></div>
+                <div class="product">{{$value.Price}}元</div>
+            </div>
+        {{end}}
+        <div class="clear"></div>
+        <div id="pagination" class="pagination fr">
+        </div>
+    </div>
+    <div class="clear"></div>
+</div>
+
+<!-- end 单品 -->
+<script>
+    $(function () {
+        $('#pagination').jqPaginator({
+            totalPages: {{.totalPages}},
+            visiblePages: 10,
+            currentPage: {{.page}},
+            onPageChange: function (num, type) {
+                console.log(num, type)
+                if (type == "change") {
+                    location.href = "/category_{{.currentProductCate.Id}}.html?page=" + num;
+                }
+            }
+        });
+    })
+</script>
+{{template "page_footer.tmpl" .}}
+</body>
+</html>
+{{end}}

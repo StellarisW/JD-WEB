@@ -1,0 +1,913 @@
+basePath: /
+definitions:
+  model.Address:
+    properties:
+      address:
+        type: string
+      create_time:
+        description: 创建时间
+        type: string
+      default_address:
+        type: integer
+      id:
+        description: '`gorm:"primarykey"` // 主键ID'
+        type: integer
+      name:
+        type: string
+      phone:
+        type: string
+      uid:
+        type: integer
+      update_time:
+        description: 更新时间
+        type: string
+      zipcode:
+        type: string
+    type: object
+  model.ProductImage:
+    properties:
+      color_id:
+        type: integer
+      create_time:
+        description: 创建时间
+        type: string
+      id:
+        description: '`gorm:"primarykey"` // 主键ID'
+        type: integer
+      img_url:
+        type: string
+      product_id:
+        type: integer
+      sort:
+        type: integer
+      status:
+        type: integer
+      update_time:
+        description: 更新时间
+        type: string
+    type: object
+  request.LoginReq:
+    properties:
+      password:
+        description: 密码
+        type: string
+      phone:
+        description: 用户名
+        type: string
+    required:
+    - password
+    - phone
+    type: object
+  response.CartProductRes:
+    properties:
+      allPrice:
+        type: number
+      currentAllPrice:
+        type: number
+      num:
+        type: integer
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      msg:
+        type: string
+      success:
+        type: boolean
+    type: object
+  response.SmsRes:
+    properties:
+      sign:
+        type: string
+      smsCode:
+        type: string
+    type: object
+host: stellaris.wang
+info:
+  contact: {}
+  description: "# JD-WEB\r\n[![Build Status](https://img.shields.io/badge/build-1.01-brightgreen)](https://travis-ci.org/pibigstar/go-todo)\r\n\r\n>
+    此项目是模拟京东电商网站的一个后端平台，实现电商网站的基本功能。\r\n>\r\n> 因为前端队友跑路了，所以自己写的模板文件，写得太烂了，页面美观度保证不了,所以别介意页面了。。。\r\n\r\n##
+    1.项目结构\r\n\r\n<details>\r\n<summary>展开查看</summary>\r\n<pre><code>\r\n    ├── app
+    \                       (项目文件)\r\n        ├── api                    (api层)\r\n
+    \       ├── global                 (全局对象)\r\n        ├── internal               (内部逻辑)\r\n
+    \           ├── consts             (常量定义)\r\n            ├── middleware         (中间件层)\r\n
+    \           ├── model              (模型层)\r\n                ├── config         (配置文件模型)\r\n
+    \               ├── request        (http请求模型)\r\n                ├── response
+    \      (http响应模型)\r\n            ├── service            (服务层)\r\n        ├── manifest
+    \              (交付清单)\r\n            ├── config             (配置管理)\r\n            ├──
+    docs               (swag接口文档)\r\n            ├── docker             (镜像文件)\r\n
+    \           ├── sql                (mysql初始化配置文件)\r\n        ├── resource               (资源文件)\r\n
+    \           ├── public             (静态资源)\r\n            ├── template           (模板文件)\r\n
+    \       ├── router                 (路由层)\r\n    ├── boot                       (项目启动文件)\r\n
+    \   ├── cert                       (证书目录)\r\n    ├── log                        (日志目录)\r\n
+    \   ├── utils                      (工具包)                    \r\n</pre></code>\r\n</details>\r\n\r\n##
+    2. 使用技术\r\n\r\n- [x] Swagger接口文档 实现 openapi v3规范\r\n- [x] 基于Viper的配置文件管理系统\r\n-
+    [x] 基于Zap+Lumberjack的日志管理系统\r\n- [x] 基于Nginx实现https全站加密, 静态文件代理\r\n- [x] 使用mysql数据库和redis作服务器缓存\r\n-
+    [x] 基于singleflight包 进行并发控制防止缓存击穿\r\n- [x] JWT+Oauth2.0的用户鉴权   (尚未实现两者整合)\r\n-
+    [x] 对用户和服务器之间传输的cookie,password进行SHA256,MD5加密\r\n- [x] 实现支付宝支付接口\r\n- [ ] 基于 ElasticSearch
+    实现网站搜索引擎\r\n\r\n### 2.1 后端框架\r\n使用`Gin`框架, golang 版本: `1.7.1`\r\n\r\n##### 特性\r\n\r\nGin
+    是一个用 Go 编写的 HTTP web 框架。 它是一个类似于 [martini](https://github.com/go-martini/martini)
+    但拥有更好性能的 API 框架, 优于 [httprouter](https://github.com/julienschmidt/httprouter)，速度提高了近
+    40 倍。如果你需要极好的性能，使用 Gin 吧。\r\n\r\n### 2.2 接口文档\r\n\r\n使用`Swagger`自动化生成接口文档  [点击访问](`https://www.stellaris.wang/swagger/index.html`)\r\n\r\n#####
+    特点\r\n\r\n自动化生成RESTful API 文档\r\n\r\n##### Swag设置\r\n\r\n`./main.go`\r\n\r\n`/app/api`\r\n\r\n#####
+    生成文档\r\n\r\n`/app/manifest/docs`\r\n\r\n### 2.3 配置文件读取\r\n使用`viper`框架 \r\n\r\n#####
+    特点\r\n\r\n- 找到和反序列化 JSON TOML YAML HCL JAVA配置文件\r\n- 提供一个配置文件默认值和可选值的机制\r\n- 提供重写配置值和Flag的可选值\r\n-
+    提供系统的参数别名,解决对已有代码的侵入\r\n- 轻松的辨别出用户输入值还是配置文件值\r\n\r\n##### 配置模型\r\n\r\n`/app/internal/model/config`\r\n\r\n#####
+    配置文件\r\n\r\n`/app/manifest/config/config.yaml`\r\n\r\n### 2.3 日志输出\r\n使用`zap`框架日志输出+`Lumberjack`进行日志分割\r\n\r\n#####
+    特点\r\n\r\n- 按不同的日志级别存储到不同的日志文件中(实现了`info` `debug` `warn` `error` `panic` 等各种日志级别)\r\n-
+    控制最多保留的日志文件及保留最近多少天的日志文件(控制日志的最大磁盘使用量)\r\n- 控制每个日志文件的大小\r\n\r\n##### 详细配置\r\n\r\n`/boot/zap.go`\r\n\r\n\r\n###
+    2.4 Nginx\r\n##### 特点\r\n\r\n- 使用Nginx反向代理 提高访问速度，提供防火墙作用\r\n- 使用Nginx托管网站证书，实现https全站加密\r\n-
+    使用Nginx进行静态文件代理 提高访问速度\r\n\r\n### 2.5 数据库\r\n\r\n#### MySQL\r\n\r\n##### 存储\r\n\r\n-
+    页面信息\r\n\r\n- 用户信息\r\n\r\n#### Redis\r\n\r\n##### 存储\r\n\r\n- JWT\r\n- Session\r\n-
+    页面缓存\r\n\r\n#### 并发控制\r\n\r\n使用`singleflight`包进行并发控制防止缓存击穿\r\n\r\n### 2.6 用户鉴权\r\n\r\n####
+    JWT\r\n\r\n- 提供令牌生效时间，过期时间，缓冲时间等配置选项\r\n- 提供JWT黑名单功能\r\n\r\n#### Oauth\r\n\r\n实现GitHub第三方登录
+    (登录返回用户名验证是否有效,尚未实现于JWT整合)\r\n\r\n### 2.7 安全性\r\n\r\n对Cookie,Session及用户名密码进行加密，增加安全性\r\n\r\n###
+    2.8 支付接口\r\n\r\n实现了支付宝的支付功能\r\n\r\n##### 沙盒账号\r\n\r\n###### 账号: yntgxm3661@sandbox.com\r\n\r\n######
+    登录密码: 111111\r\n\r\n###### 支付密码: 111111\r\n\r\n## 3. 部署\r\n\r\n### 3.1 编译成镜像\r\n```bash\r\ndocker
+    build -t web:v1 .\r\n```\r\n### 3.2 启动容器\r\n```bash\r\ndocker run -d -p 8080:8080
+    -it --rm --name myweb web:v1\r\n```\r\n\r\n### 3.3 进入容器\r\n```bash\r\ndocker exec
+    -it myweb /bin/bash\r\n```\r\n\r\n### 3.4 删除镜像\r\n```bash\r\n# 停止容器\r\ndocker
+    stop myweb\r\n# 删除容器\r\ndocker rm myweb\r\n# 删除镜像\r\ndocker rmi -f web:v1\r\n```\r\n\r\n"
+  title: Swagger JD-WEB API
+  version: "1.01"
+paths:
+  /:
+    get:
+      responses: {}
+      summary: 主页展示
+      tags:
+      - Base
+  /alipay:
+    get:
+      parameters:
+      - description: 从支付宝接口返回的id
+        in: query
+        name: aliId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 重定向
+          headers:
+            Location:
+              description: /user/order
+              type: string
+      summary: alipay
+      tags:
+      - Pay
+  /alipayNotify:
+    get:
+      parameters:
+      - description: 支付token
+        in: query
+        name: sign
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 更新订单状态
+      summary: 验证支付token
+      tags:
+      - Pay
+  /alipayReturn:
+    get:
+      responses:
+        "200":
+          description: 重定向
+          headers:
+            Location:
+              description: /user/order
+              type: string
+      summary: 支付重定向
+      tags:
+      - Pay
+  /auth/doRegister:
+    post:
+      parameters:
+      - description: 表单
+        in: formData
+        name: Form
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 注册用户到数据库
+        "302":
+          description: 重定向
+          headers:
+            Location:
+              description: /register_step1
+              type: string
+      summary: 验证注册提交表单
+      tags:
+      - Register
+  /auth/sendCode:
+    get:
+      parameters:
+      - description: 手机号
+        in: query
+        name: phone
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 发送成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  $ref: '#/definitions/response.SmsRes'
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: 发送失败
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 发送验证码
+      tags:
+      - Register
+  /auth/validateSmsCode:
+    get:
+      parameters:
+      - description: 验证
+        in: query
+        name: sms_code
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 验证成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: 发送失败
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 验证手机验证码
+      tags:
+      - Register
+  /buy/checkout:
+    get:
+      parameters:
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 展示结算页面
+      summary: 展示结算页面
+      tags:
+      - Buy
+  /buy/confirm:
+    get:
+      parameters:
+      - description: 订单id
+        in: query
+        name: orderId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 展示页面
+        "400":
+          description: 重定向到主页
+          headers:
+            Location:
+              description: /
+              type: string
+      summary: 展示结算确认页面
+      tags:
+      - Buy
+  /buy/doOrder:
+    post:
+      parameters:
+      - description: 订单签名
+        in: formData
+        name: orderSign
+        required: true
+        type: string
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: ""
+          headers:
+            Location:
+              description: /buy/confirm?id=
+              type: string
+      summary: 处理订单
+      tags:
+      - Buy
+  /buy/orderPayStatus:
+    get:
+      parameters:
+      - description: 订单id
+        in: query
+        name: orderId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 获取订单状态成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: 获取订单状态失败
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 获取订单状态
+      tags:
+      - Buy
+  /cart:
+    get:
+      parameters:
+      - description: cartList
+        in: header
+        name: cartList
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 展示购物车
+      summary: 购物车展示
+      tags:
+      - Cart
+  /cart/add:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        type: string
+      - description: 颜色id
+        in: query
+        name: color_id
+        type: string
+      responses:
+        "200":
+          description: 增加商品成功
+      summary: 购物车增加商品
+      tags:
+      - Cart
+  /cart/dec:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        type: string
+      - description: 商品颜色
+        in: query
+        name: product_color
+        type: string
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 减少商品数量成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  $ref: '#/definitions/response.CartProductRes'
+                msg:
+                  type: string
+              type: object
+      summary: 购物车减少商品数量
+      tags:
+      - Cart
+  /cart/del:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        type: string
+      - description: 商品颜色
+        in: query
+        name: product_color
+        type: string
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 刷新页面
+      summary: 删除购物车商品
+      tags:
+      - Cart
+  /cart/inc:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        type: string
+      - description: 商品颜色
+        in: query
+        name: product_color
+        type: string
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 增加商品数量成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  $ref: '#/definitions/response.CartProductRes'
+                msg:
+                  type: string
+              type: object
+      summary: 购物车增加商品数量
+      tags:
+      - Cart
+  /cart/selectAll:
+    get:
+      parameters:
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 选择全部购物车商品成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  type: number
+                msg:
+                  type: string
+              type: object
+      summary: 选择全部购物车商品
+      tags:
+      - Cart
+  /cart/selectOne:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        type: string
+      - description: 商品颜色
+        in: query
+        name: product_color
+        type: string
+      - description: cartList
+        in: header
+        name: cartList
+        type: string
+      responses:
+        "200":
+          description: 选择一个购物车商品成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  type: number
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: 选择一个购物车商品失败
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 选择一个购物车商品
+      tags:
+      - Cart
+  /category/:id:
+    get:
+      parameters:
+      - description: 商品id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 页面数
+        in: query
+        name: page
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 返回页面
+      summary: 商品列表展示
+      tags:
+      - Product
+  /item/:id:
+    get:
+      parameters:
+      - description: 商品id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 返回页面
+      summary: 商品详细页
+      tags:
+      - Product
+  /login:
+    get:
+      produces:
+      - text/html
+      responses: {}
+      summary: 登录页面展示
+      tags:
+      - Login
+    post:
+      parameters:
+      - description: 用户名, 密码
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 签发用户token
+          headers:
+            token:
+              description: 签发用户token
+              type: string
+        "400":
+          description: 返回错误信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                msg:
+                  type: string
+                ok:
+                  type: boolean
+              type: object
+      summary: 登录验证
+      tags:
+      - Login
+  /login/oauth:
+    get:
+      responses:
+        "200":
+          description: 重定向
+          headers:
+            Location:
+              description: /login/welcome/?access_token=
+              type: string
+      summary: Oauth认证
+      tags:
+      - Login
+  /login/welcome:
+    get:
+      produces:
+      - text/html
+      responses: {}
+      summary: Oauth欢迎页面
+      tags:
+      - Login
+  /logout:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      summary: 登出
+      tags:
+      - Login
+  /product/collect:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 收藏商品
+      tags:
+      - Product
+  /product/getImgList:
+    get:
+      parameters:
+      - description: 商品id
+        in: query
+        name: product_id
+        required: true
+        type: string
+      - description: 颜色id
+        in: query
+        name: color_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  $ref: '#/definitions/model.ProductImage'
+                msg:
+                  type: string
+              type: object
+      summary: 查询商品图库
+      tags:
+      - Product
+  /register_step1:
+    get:
+      produces:
+      - text/html
+      responses: {}
+      summary: 注册页面展示
+      tags:
+      - Register
+  /register_step2:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 图形验证码答案
+        in: query
+        name: captcha
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: 显示页面
+        "302":
+          description: 重定向
+          headers:
+            Location:
+              description: /register_step1
+              type: string
+      summary: 验证图形验证码
+      tags:
+      - Register
+  /user:
+    get:
+      responses:
+        "200":
+          description: 页面展示
+      summary: 用户页面
+      tags:
+      - User
+  /user/address/add:
+    post:
+      parameters:
+      - description: jwt
+        in: header
+        name: token
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 增加收货地址
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  items:
+                    $ref: '#/definitions/model.Address'
+                  type: array
+                msg:
+                  type: string
+              type: object
+        "400":
+          description: 增加收货地址失败
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 增加收货地址
+      tags:
+      - User
+  /user/address/changeDefault:
+    post:
+      parameters:
+      - description: jwt
+        in: header
+        name: token
+        required: true
+        type: string
+      - description: 收货地址id
+        in: query
+        name: address_id
+        type: string
+      responses:
+        "200":
+          description: 设置默认收货地址成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                msg:
+                  type: string
+              type: object
+      summary: 设置默认收货地址
+      tags:
+      - User
+  /user/address/edit:
+    post:
+      parameters:
+      - description: jwt
+        in: header
+        name: token
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 增加收货地址成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  items:
+                    $ref: '#/definitions/model.Address'
+                  type: array
+                msg:
+                  type: string
+              type: object
+      summary: 编辑收货地址
+      tags:
+      - User
+  /user/address/getOne:
+    get:
+      parameters:
+      - description: 收货地址id
+        in: query
+        name: address_id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 展示收货地址
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                code:
+                  type: boolean
+                data:
+                  $ref: '#/definitions/model.Address'
+                msg:
+                  type: string
+              type: object
+      summary: 获取一个收货地址
+      tags:
+      - User
+  /user/collect:
+    get:
+      parameters:
+      - description: 页面数
+        in: query
+        name: page
+        type: string
+      responses:
+        "200":
+          description: 展示收藏商品
+      summary: 获取收藏商品
+      tags:
+      - User
+  /user/order:
+    get:
+      parameters:
+      - description: 订单id
+        in: query
+        name: uid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 展示订单
+      summary: 获取订单
+      tags:
+      - User
+  /user/orderInfo:
+    get:
+      parameters:
+      - description: 订单id
+        in: query
+        name: uid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: 展示订单信息
+      summary: 获取订单详细信息
+      tags:
+      - User
+schemes:
+- https
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"
