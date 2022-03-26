@@ -10,11 +10,11 @@
             <div class="star fl mb20" style="border:2px solid #fff;width:230px;cursor:pointer;"
                  onmouseout="this.style.border='2px solid #fff'" onmousemove="this.style.border='2px solid red'">
                 <div class="sub_star">
-                    <a href="item_{{$value.Id}}.html" target="_blank">
+                    <a href="../item/{{$value.Id}}" target="_blank">
                         <img src="{{$value.ProductImg}}" alt="{{$value.Title}}"/>
                     </a>
                 </div>
-                <div class="brand"><a href="item_{{$value.Id}}.html" target="_blank">{{$value.Title}}</a></div>
+                <div class="brand"><a href="../item/{{$value.Id}}" target="_blank">{{$value.Title}}</a></div>
                 <div class="product">{{$value.Price}}元</div>
             </div>
         {{end}}
@@ -35,7 +35,7 @@
             onPageChange: function (num, type) {
                 console.log(num, type)
                 if (type == "change") {
-                    location.href = "/category_{{.currentProductCate.Id}}.html?page=" + num;
+                    location.href = "/category/{{.currentProductCate.Id}}?page=" + num;
                 }
             }
         });

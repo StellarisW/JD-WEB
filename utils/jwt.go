@@ -99,11 +99,7 @@ func IsBlacklist(jwt string) bool {
 }
 
 func (j *JWT) JsonInBlackList(jwtStr JwtBlackList) error {
-	_, err := g.DB.Exec("insert into jwt_blacklist(jwt) values (?)", jwtStr.Jwt)
-	if err != nil {
-		g.Logger.Debugf("%v\n", err)
-		return err
-	}
+	g.DB.Select("jwt").Create(jwtStr)
 	g.Redis.Set(context.Background(), "jwt_"+jwtStr.Id, jwtStr.Jwt, 0)
 	return nil
 }

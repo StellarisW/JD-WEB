@@ -51,8 +51,6 @@ func NewMapperFunc(tagName string, f func(string) string) *Mapper {
 }
 
 // TypeMap 返回字段字符串到int切片的映射
-// TypeMap returns a mapping of field strings to int slices representing
-// the traversal down the struct to reach the field.
 func (m *Mapper) TypeMap(t reflect.Type) *StructMap {
 	m.mutex.Lock()
 	mapping, ok := m.cache[t]
@@ -64,9 +62,8 @@ func (m *Mapper) TypeMap(t reflect.Type) *StructMap {
 	return mapping
 }
 
-// TraversalsByName returns a slice of int slices which represent the struct
-// traversals for each mapped name.  Panics if t is not a struct or Indirectable
-// to a struct.  Returns empty int slice for each name not found.
+// TraversalsByName 返回表示每个结构体字段映射名称的int切片
+// 如果 t 不是结构体或者是对结构体不明确的 会panic
 func (m *Mapper) TraversalsByName(t reflect.Type, names []string) [][]int {
 	r := make([][]int, 0, len(names))
 	m.TraversalsByNameFunc(t, names, func(_ int, i []int) error {
@@ -81,9 +78,7 @@ func (m *Mapper) TraversalsByName(t reflect.Type, names []string) [][]int {
 	return r
 }
 
-// TraversalsByNameFunc traverses the mapped names and calls fn with the index of
-// each name and the struct traversal represented by that name. Panics if t is not
-// a struct or Indirectable to a struct. Returns the first error returned by fn or nil.
+// TraversalsByNameFunc 遍历映射的名称
 func (m *Mapper) TraversalsByNameFunc(t reflect.Type, names []string, fn func(int, []int) error) error {
 	t = Deref(t)
 	mustBe(t, reflect.Struct)
@@ -103,12 +98,11 @@ func (m *Mapper) TraversalsByNameFunc(t reflect.Type, names []string, fn func(in
 	return nil
 }
 
-// FieldByIndexes returns a value for the field given by the struct traversal
-// for the given value.
+// FieldByIndexes 返回结构体遍历后, 给定的指定字段的值
 func FieldByIndexes(v reflect.Value, indexes []int) reflect.Value {
 	for _, i := range indexes {
 		v = reflect.Indirect(v).Field(i)
-		// if this is a pointer and it's nil, allocate a new value and set it
+		// /如果这是一个空指针，则分配一个新值
 		if v.Kind() == reflect.Ptr && v.IsNil() {
 			alloc := reflect.New(Deref(v.Type()))
 			v.Set(alloc)
@@ -120,7 +114,7 @@ func FieldByIndexes(v reflect.Value, indexes []int) reflect.Value {
 	return v
 }
 
-// Deref is Indirect for reflect.Types
+// Deref reflect.Types 的间接值
 func Deref(t reflect.Type) reflect.Type {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -134,8 +128,8 @@ type kinder interface {
 	Kind() reflect.Kind
 }
 
-// mustBe checks a value against a kind, panicing with a reflect.ValueError
-// if the kind isn't that which is required.
+// mustBe 检查 value 对应的kind
+// 如果 kind 不是所需的 会panic
 func mustBe(v kinder, expected reflect.Kind) {
 	if k := v.Kind(); k != expected {
 		panic(&reflect.ValueError{Method: methodName(), Kind: k})

@@ -1,9 +1,9 @@
 package boot
 
 import (
-	_ "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	"main/app/global"
-	dao "main/utils/sql"
 	"time"
 )
 
@@ -16,16 +16,16 @@ type Model struct {
 
 func MySQLSetup() {
 	config := g.Config.Mysql
-
-	db, err := dao.ConnectDB("mysql", config.Dsn())
+	db, err := gorm.Open(mysql.Open(config.Dsn()))
 	if err != nil {
 		g.Logger.Fatalf("Initialize MySQL server failed, err: %v\n", err)
 	}
-	db.SetConnMaxIdleTime(10 * time.Second)  // 最大空闲时间
-	db.SetConnMaxLifetime(100 * time.Second) // 最大存活时间
-	db.SetMaxIdleConns(10)                   // 最大空闲连接数
-	db.SetMaxOpenConns(100)                  // 最大连接数
-	err = db.Ping()
+	sqlDB, _ := db.DB()
+	sqlDB.SetConnMaxIdleTime(10 * time.Second)  // 最大空闲时间
+	sqlDB.SetConnMaxLifetime(100 * time.Second) // 最大存活时间
+	sqlDB.SetMaxIdleConns(10)                   // 最大空闲连接数
+	sqlDB.SetMaxOpenConns(100)                  // 最大连接数
+	err = sqlDB.Ping()
 	if err != nil {
 		g.Logger.Fatalf("Connect to MySQL server failed, err: %v\n", err)
 	}

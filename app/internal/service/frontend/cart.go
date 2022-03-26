@@ -11,9 +11,8 @@ var insCart = sCart{}
 
 func (s *sCart) AddPruduct(productId, colorId int) (currentData model.Cart, product model.Product) {
 	var productColor model.ProductColor
-
-	_ = g.DB.Get(&product, "select * from product where id=?", productId)
-	_ = g.DB.Get(&productColor, "select * from product_color where id=?", colorId)
+	g.DB.Where("id=?", productId).Find(&product)
+	g.DB.Where("id=?", colorId).Find(&productColor)
 
 	// 获取增加购物车的商品数据
 	currentData = model.Cart{

@@ -2,8 +2,6 @@ package model
 
 import (
 	g "main/app/global"
-	dao "main/utils/sql"
-	"strconv"
 )
 
 type Product struct {
@@ -158,13 +156,6 @@ func GetProductByCategory(cateId int, productType string, limitNum int) ([]Produ
 		break
 	}
 
-	//DB.Where(where, tempSlice).Select("id,title,price,product_img,sub_title").Limit(limitNum).Order("sort desc").Find(&product)
-	sqlStr := "select id,title,price,product_img,sub_title from product " +
-		where + " order by sort desc" + " limit " + strconv.Itoa(limitNum)
-	str, args, err := dao.In(sqlStr, tempSlice)
-	if err != nil {
-		return nil, err
-	}
-	_ = g.DB.Select(&product, str, args...)
+	g.DB.Where(where, tempSlice).Select("id,title,price,product_img,sub_title").Limit(limitNum).Order("sort desc").Find(&product)
 	return product, nil
 }

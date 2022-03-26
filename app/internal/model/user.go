@@ -30,7 +30,7 @@ func (UserSms) TableName() string {
 
 func (u User) Verify() bool {
 	var user User
-	_ = g.DB.Get(&user, "select * from user where phone=?", u.Phone)
+	g.DB.Where("phone=?", u.Phone).Find(&user)
 	if user.Id == 0 {
 		return false
 	}

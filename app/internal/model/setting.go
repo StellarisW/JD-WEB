@@ -2,7 +2,6 @@ package model
 
 import (
 	g "main/app/global"
-	"reflect"
 )
 
 type Setting struct {
@@ -21,18 +20,4 @@ type Setting struct {
 	EndPoint        string `json:"end_point" form:"end_point" db:"end_point"`
 	BucketName      string `json:"bucket_name" form:"bucket_name" db:"bucket_name"`
 	OssStatus       int    `json:"oss_status" form:"oss_status" db:"oss_status"`
-}
-
-func (Setting) TableName() string {
-	return "setting"
-}
-
-func GetSettingByColumn(columnName string) string {
-	//redis file
-	var setting = Setting{}
-	g.DB.Get(&setting, "select * from setting order by `setting`.`id` limit 1")
-	//反射来获取
-	v := reflect.ValueOf(setting)
-	val := v.FieldByName(columnName).String()
-	return val
 }

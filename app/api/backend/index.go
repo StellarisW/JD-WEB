@@ -71,7 +71,8 @@ func (a *IndexApi) ChangeStatus(c *gin.Context) {
 	}
 	table := c.Query("table") // TODO:不确定
 	field := c.Query("field") // TODO:不确定
-	_, err := g.DB.Exec("update "+table+" set "+field+"=ABS("+field+"-1) where id=?", id)
+	sqlDB, _ := g.DB.DB()
+	_, err := sqlDB.Exec("update "+table+" set "+field+"=ABS("+field+"-1) where id=?", id)
 	if err != nil {
 		response.FailWithMessage(c, "更新数据失败")
 		return
@@ -84,7 +85,8 @@ func (a *IndexApi) EditNum(c *gin.Context) {
 	table := c.Query("table") // TODO:不确定
 	field := c.Query("field") // TODO:不确定
 	num := c.Query("num")     // TODO:不确定
-	_, err := g.DB.Exec("update " + table + " set " + field + "=" + num + " where id=" + id)
+	sqlDB, _ := g.DB.DB()
+	_, err := sqlDB.Exec("update " + table + " set " + field + "=" + num + " where id=" + id)
 	if err != nil {
 		response.FailWithMessage(c, "修改数量失败")
 		return

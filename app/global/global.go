@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm"
 	"main/app/internal/model/config"
-	dao "main/utils/sql"
 	"sync"
 	"time"
 )
@@ -19,7 +19,7 @@ type Model struct {
 }
 
 var (
-	DB *dao.DB
+	DB *gorm.DB
 	//DBList map[string]*gorm.DB
 	Redis  *redis.Client
 	Config config.Get

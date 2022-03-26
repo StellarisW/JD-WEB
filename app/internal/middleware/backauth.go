@@ -35,7 +35,7 @@ func BackendAuth() gin.HandlerFunc {
 					roleAuthMap[v.AuthId] = v.AuthId
 				}
 				auth := model.Auth{}
-				_ = g.DB.Get(&auth, "select * from auth where url=?", urlPath.Path)
+				g.DB.Where("url=?", urlPath.Path).Find(&auth)
 				if _, ok := roleAuthMap[auth.Id]; !ok {
 					c.Writer.WriteString("没有权限")
 					c.Next()

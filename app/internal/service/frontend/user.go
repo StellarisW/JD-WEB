@@ -70,51 +70,39 @@ func (s *sUser) GetSearchResult(keywords string, sqlStr *string) {
 
 func (s *sUser) GetOrderList(userId, page int, where string) ([]model.Order, float64, int) {
 	pageSize := 2
-	var count int
-	_ = g.DB.QueryRow("select count(*) from `order` where "+where, userId).Scan(&count)
+	var count int64
+	g.DB.Where(where, userId).Table("order").Count(&count)
 	var order []model.Order
-	var orderItem []model.OrderItem
-	_ = g.DB.Select(&order, "select * from `order` where "+where+" order by create_time desc limit ? offset ?",
-		userId, pageSize, (page-1)*pageSize)
-
-	g.Logger.Debugf("%v\n%v\n", order, orderItem)
-	for k, o := range order {
-		_ = g.DB.Select(&orderItem, "select * from order_item where order_id=? order by create_time desc limit ? offset ?",
-			o.OrderId, pageSize, (page-1)*pageSize)
-		order[k].OrderItem = orderItem
-	}
+	g.DB.Where(where, userId).Offset((page - 1) * pageSize).Limit(pageSize).Preload("OrderItem").
+		Order("create_time desc").Find(&order)
 	g.Logger.Debugf("%v\n", order)
 	return order, math.Ceil(float64(count) / float64(pageSize)), page
 }
 
 func (s *sUser) GetOrderInfo(id, userId int) model.Order {
 	var order model.Order
-	var orderItem []model.OrderItem
-	_ = g.DB.Get(&order, "select * from `order` where id=? and uid=?", id, userId)
-	_ = g.DB.Select(&orderItem, "select * from order_item where order_id=? and uid=?", order.OrderId, userId)
-	order.OrderItem = orderItem
+	g.DB.Where("id=? AND uid=?", id, userId).Preload("OrderItem").Find(&order)
 	return order
 }
 
 func (s *sUser) GetCollectProduct(userId, page int) ([]model.Product, float64, int) {
 	pageSize := 2
-	var count int
-	_ = g.DB.QueryRow("select count(*) from product_collect where user_id=?", userId).Scan(&count)
+	var count int64
+	g.DB.Where("user_id=?").Table("product_collect").Count(&count)
 	var productIds []int
 	var productList []model.Product
 	var product model.Product
-	_ = g.DB.Select(&productIds, "select product_id from product_collect where user_id=? order by create_time desc limit ? offset ?",
-		userId, pageSize, (page-1)*pageSize)
+	g.DB.Where("user_id=?", userId).Offset((page - 1) * pageSize).Limit(pageSize).Order("create_time desc").Find(&productIds)
 	for _, id := range productIds {
-		_ = g.DB.Get(&product, "select * from product where id=?", id)
+		g.DB.Where("id=?", id).Find(&product)
 		productList = append(productList, product)
 	}
 	return productList, math.Ceil(float64(count) / float64(pageSize)), page
 }
 
 func (s *sUser) IsAddressLimit(userId int) bool {
-	var count int
-	_ = g.DB.QueryRow("select count(*) from address where uid=?", userId).Scan(&count)
+	var count int64
+	g.DB.Where("uid=?", userId).Count(&count)
 	if count > 10 {
 		return true
 	}
@@ -123,39 +111,42 @@ func (s *sUser) IsAddressLimit(userId int) bool {
 
 func (s *sUser) GetOneAddress(addressId int) model.Address {
 	var address model.Address
-	_ = g.DB.Get(&address, "select * from address where id=?", addressId)
+	g.DB.Where("id=?", addressId).Find(&address)
 	return address
 }
 
 func (s *sUser) AddAddress(userId int, address model.Address) []model.Address {
-	_, err := g.DB.Exec("update address set default_address=0 where uid=?", userId)
-	g.Logger.Debugf("%v\n", err)
-	_, err = g.DB.Exec("insert into address(uid, phone, name, zipcode, address,default_address)values (?,?,?,?,?,?)",
-		address.Uid, address.Phone, address.Name, address.Zipcode, address.Address, address.DefaultAddress)
-	g.Logger.Debugf("%v\n", err)
-
+	g.DB.Table("address").Where("uid=?", userId).Updates(map[string]interface{}{"default_address": 0})
+	addressResult := model.Address{
+		Uid:            address.Uid,
+		Name:           address.Phone,
+		Phone:          address.Phone,
+		Address:        address.Address,
+		Zipcode:        address.Zipcode,
+		DefaultAddress: address.DefaultAddress,
+	}
+	g.DB.Create(&addressResult)
 	var allAddressResult []model.Address
-	_ = g.DB.Select(&allAddressResult, "select * from address where uid=?", userId)
-
+	g.DB.Where("uid=?", userId).Find(&allAddressResult)
 	return allAddressResult
 }
 
 func (s *sUser) EditAddress(userId int, address model.Address) []model.Address {
-	g.Logger.Debugf("%v\n", address)
-	_, err := g.DB.Exec("update address set default_address=0 where uid=?", userId)
-	g.Logger.Debugf("%v\n", err)
-	_, err = g.DB.Exec("update address set phone=?,name=?,zipcode=?,address=?,default_address=? where id=?",
-		address.Phone, address.Name, address.Zipcode, address.Address, address.DefaultAddress, address.Id)
-	g.Logger.Debugf("%v\n", err)
-
+	g.DB.Table("address").Where("uid=?", userId).Updates(map[string]interface{}{"default_address": 0})
+	addressModel := model.Address{}
+	g.DB.Where("id=?", address.Id).Find(&addressModel)
+	addressModel.Name = address.Name
+	addressModel.Phone = address.Phone
+	addressModel.Zipcode = address.Zipcode
+	addressModel.Address = address.Address
+	addressModel.DefaultAddress = address.DefaultAddress
+	g.DB.Save(&addressModel)
 	var allAddressResult []model.Address
-	err = g.DB.Select(&allAddressResult, "select * from address where uid=? order by default_address desc",
-		userId)
-	g.Logger.Debugf("%v\n%v\n", err, allAddressResult)
+	g.DB.Where("uid=?", userId).Find(&allAddressResult)
 	return allAddressResult
 }
 
 func (s *sUser) ChangeToDefaultAddress(userId, addressId int) {
-	_, _ = g.DB.Exec("update address set default_address=0 where uid=?", userId)
-	_, _ = g.DB.Exec("update address set default_address=1 where id=?", addressId)
+	g.DB.Table("address").Where("uid=?", userId).Updates(map[string]interface{}{"default_address": 0})
+	g.DB.Table("address").Where("id=?", addressId).Updates(map[string]interface{}{"default_address": 1})
 }

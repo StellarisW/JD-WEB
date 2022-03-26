@@ -35,7 +35,7 @@ func (s *sBuy) GetAddress(userId int) []model.Address {
 
 func (s *sBuy) GetDefaultAddress(userId int) model.Address {
 	var address model.Address
-	_ = g.DB.Get(&address, "select * from address where uid=? and default_address=1", userId)
+	g.DB.Where("uid=? AND default_address=1", userId).Find(&address)
 	return address
 }
 
@@ -46,13 +46,32 @@ func (s *sBuy) GenerateSign() string {
 
 func (s *sBuy) GenerateOrderInfo(userId int, address model.Address, orderList []model.Cart, allPrice float64) string {
 	orderId := utils.GenerateOrderId()
-	_, _ = g.DB.Exec("insert into `order`(order_id, uid, all_price, phone, name, address, zipcode, pay_status, pay_type, order_status) values (?,?,?,?,?,?,?,?,?,?)",
-		orderId, userId, allPrice, address.Phone, address.Name, address.Address, address.Zipcode, 0, 0, 0)
-	var order model.Order
-	_ = g.DB.Get(&order, "select * from `order` where order_id=?", orderId)
+	order := model.Order{
+		OrderId:     utils.GenerateOrderId(),
+		Uid:         userId,
+		AllPrice:    allPrice,
+		Phone:       address.Phone,
+		Name:        address.Name,
+		Address:     address.Address,
+		Zipcode:     address.Zipcode,
+		PayStatus:   0,
+		PayType:     0,
+		OrderStatus: 0,
+	}
+	g.DB.Create(&order)
 	for i := 0; i < len(orderList); i++ {
-		_, _ = g.DB.Exec("insert into `order_item`(order_id, uid, product_title, product_id, product_img, product_price, product_num, product_version, product_color) values (?,?,?,?,?,?,?,?,?)",
-			orderId, userId, orderList[i].Title, orderList[i].Id, orderList[i].ProductImg, orderList[i].Price, orderList[i].Num, orderList[i].ProductVersion, orderList[i].ProductColor)
+		orderItem := model.OrderItem{
+			OrderId:        orderId,
+			Uid:            userId,
+			ProductTitle:   orderList[i].Title,
+			ProductId:      orderList[i].Id,
+			ProductImg:     orderList[i].ProductImg,
+			ProductPrice:   orderList[i].Price,
+			ProductNum:     orderList[i].Num,
+			ProductVersion: orderList[i].ProductVersion,
+			ProductColor:   orderList[i].ProductColor,
+		}
+		g.DB.Create(&orderItem)
 	}
 	return orderId
 }
@@ -69,13 +88,17 @@ func (s *sBuy) UpdateCart(PCartList *[]model.Cart) {
 }
 
 func (s *sBuy) UpdateOrder(temp string) {
+	var order model.Order
 	orderId := strings.Split(temp, "_")[1]
-	_, _ = g.DB.Exec("update `order` set pay_status=1,order_status=1 where order_id=?", orderId)
+	g.DB.Where("order_id=?", orderId).Find(&order)
+	order.PayStatus = 1
+	order.OrderStatus = 1
+	g.DB.Save(&order)
 }
 
 func (s *sBuy) GetOrderInfo(orderId string) model.Order {
 	var orderInfo model.Order
-	_ = g.DB.Get(&orderInfo, "select * from `order` where order_id=?", orderId)
+	g.DB.Where("order_id=?", orderId).Find(&orderInfo)
 	return orderInfo
 }
 

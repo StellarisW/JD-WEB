@@ -261,8 +261,12 @@ func (a *AuthApi) GoRegister(c *gin.Context) {
 	g.DB.Select(&userTemp, "select * from user_sms where sign=?", sign)
 	ip := strings.Split(c.Request.RemoteAddr, ":")[0]
 	if len(userTemp) > 0 {
-		g.DB.DB.Exec("insert into user(phone,password,last_ip) values (?,?,?)",
-			userTemp[0].Phone, utils.Md5(password), ip)
+		user := model.User{
+			Phone:    userTemp[0].Phone,
+			Password: utils.Md5(password),
+			LastIp:   ip,
+		}
+		g.DB.Table("user").Select("phone", "password", "last_ip").Create(&user)
 		c.Redirect(302, "/")
 	} else {
 		c.Redirect(302, "/register_step1")
@@ -279,7 +283,7 @@ func (a *AuthApi) GoRegister(c *gin.Context) {
 func (a *AuthApi) SendCode(c *gin.Context) {
 	phone := c.Query("phone")
 	var user []model.User
-	g.DB.Get(&user, "select * from user where phone=?", phone)
+	g.DB.Where("phone=?", phone).Find(&user)
 	if len(user) > 0 {
 		response.FailWithMessage(c, "此用户已存在")
 		return
@@ -292,7 +296,7 @@ func (a *AuthApi) SendCode(c *gin.Context) {
 	var userTemp []model.UserSms
 	g.DB.Select(&userTemp, "select * from user_sms where add_day=? and phone=?", addDay, phone)
 	var sendCount int
-	g.DB.Get(&sendCount, "select send_count from user_sms where add_day=? and ip=?", addDay, ip)
+	g.DB.Table("user_sms").Where("add_day=? AND ip=?").Find(&sendCount)
 	//验证IP地址今天发送的次数是否合法
 	if sendCount <= 10 {
 		if len(userTemp) > 0 {
@@ -301,7 +305,7 @@ func (a *AuthApi) SendCode(c *gin.Context) {
 				utils.SendMsg(smsCode)
 				//a.SetSession("sms_code", sms_code)
 				oneUserSms := model.UserSms{}
-				g.DB.Get(&oneUserSms, "select * from user_sms where id=?", userTemp[0].Id)
+				g.DB.Where("id=?", userTemp[0].Id).Find(&oneUserSms)
 				oneUserSms.SendCount += 1
 				g.DB.Exec("update user_sms set send_count=? where id=?", oneUserSms.SendCount, oneUserSms.Id)
 				response.OkWithDetailed(c, "短信发送成功", response.SmsRes{

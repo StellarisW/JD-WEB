@@ -15,11 +15,7 @@ func (s *sIndex) GetBanner(rs *utils.RedisStore) ([]model.Banner, error) {
 	if hasBanner := rs.Get(rs.PreKey+"banner", &banner); hasBanner == true {
 		return banner, nil
 	}
-	err := g.DB.Select(&banner,
-		"select * from banner where status=1 and banner_type=1 order by sort desc")
-	if err != nil {
-		return nil, err
-	}
+	g.DB.Where("status=1 AND banner_type=1").Order("sort desc").Find(&banner)
 	rs.Set("banner", banner)
 	return banner, nil
 }

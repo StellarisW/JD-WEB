@@ -16,14 +16,12 @@ import (
 var NameMapper = strings.ToLower
 var origMapper = reflect.ValueOf(NameMapper)
 
-// Rather than creating on init, this is created when necessary so that
-// importers have time to customize the NameMapper.
 var mpr *Mapper
 
-// mprMu protects mpr.
+// 互斥锁保护mpr.
 var mprMu sync.Mutex
 
-// mapper returns a valid mapper using the configured NameMapper func.
+// 映射器使用配置的NameMapper返回有效的映射器
 func mapper() *Mapper {
 	mprMu.Lock()
 	defer mprMu.Unlock()
@@ -38,11 +36,11 @@ func mapper() *Mapper {
 	return mpr
 }
 
-// isScannable takes the reflect.Type and the actual dest value and returns
-// whether or not it's Scannable.  Something is scannable if:
-//   * it is not a struct
-//   * it implements sql.Scanner
-//   * it has no exported fields
+// isScannable 通过reflect.Type和参数值返回这个参数能否被扫描
+// 不能被扫描的参数:
+//   * 它不是结构体
+//   * 实现了sql.Scanner
+//   * 没有公有字段
 func isScannable(t reflect.Type) bool {
 	if reflect.PtrTo(t).Implements(_scannerInterface) {
 		return true
@@ -51,85 +49,38 @@ func isScannable(t reflect.Type) bool {
 		return true
 	}
 
-	// it's not important that we use the right mapper for this particular object,
-	// we're only concerned on how many exported fields this struct has
+	// 扫描一个对象选择一个正确的映射器不重要
+	// 重要的是关于这个结构体有多少导出字段
 	return len(mapper().TypeMap(t).Index) == 0
 }
 
-// Queryer is an interface used by Get and Select
+// Queryer 被 Get 和 Select 使用的接口
 type Queryer interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	Queryx(query string, args ...interface{}) (*Rows, error)
 	QueryRowx(query string, args ...interface{}) *Row
 }
 
-// Execer is an interface used by MustExec
+// Execer 被 MustExec 使用的接口
 type Execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
-}
-
-// Binder is an interface for something which can bind queries (Tx, DB)
-type binder interface {
-	DriverName() string
-	Rebind(string) string
-	BindNamed(string, interface{}) (string, []interface{}, error)
-}
-
-// Ext is a union interface which can bind, query, and exec, used by
-// NamedQuery and NamedExec.
-type Ext interface {
-	binder
-	Queryer
-	Execer
-}
-
-// Preparer is an interface used by Preparex.
-type Preparer interface {
-	Prepare(query string) (*sql.Stmt, error)
-}
-
-func mapperFor(i interface{}) *Mapper {
-	switch i := i.(type) {
-	case DB:
-		return i.Mapper
-	case *DB:
-		return i.Mapper
-	default:
-		return mapper()
-	}
 }
 
 var _scannerInterface = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
 var _valuerInterface = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
 
-// Row is a reimplementation of sql.Row in order to gain access to the underlying
-// sql.Rows.Columns() data, necessary for StructScan.
+// Row 是sql.Row的再实现，用来实现获取sql.Rows.Columns() 的数据, StructScan所需
 type Row struct {
 	err    error
 	rows   *sql.Rows
 	Mapper *Mapper
 }
 
-// Scan is a fixed implementation of sql.Row.Scan, which does not discard the
-// underlying error from the internal rows object if it exists.
+// Scan 是sql.Row.Scan的固定实现
 func (r *Row) Scan(dest ...interface{}) error {
 	if r.err != nil {
 		return r.err
 	}
-
-	// TODO(bradfitz): for now we need to defensively clone all
-	// []byte that the driver returned (not permitting
-	// *RawBytes in Rows.Scan), since we're about to close
-	// the Rows in our defer, when we return from this function.
-	// the contract with the driver.Next(...) interface is that it
-	// can return slices into read-only temporary memory that's
-	// only valid until the next Scan/Close.  But the TODO is that
-	// for a lot of drivers, this copy will be unnecessary.  We
-	// should provide an optional interface for drivers to
-	// implement to say, "don't worry, the []bytes that I return
-	// from Next will not be modified again." (for instance, if
-	// they were obtained from the network anyway) But for now we
-	// don't care.
 	defer r.rows.Close()
 	for _, dp := range dest {
 		if _, ok := dp.(*sql.RawBytes); ok {
@@ -147,15 +98,14 @@ func (r *Row) Scan(dest ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	// Make sure the query can be processed to completion with no errors.
+	// 确保查询可以处理到完成, 没有错误
 	if err := r.rows.Close(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// Columns returns the underlying sql.Rows.Columns(), or the deferred error usually
-// returned by Row.Scan()
+// Columns 返回sql.Rows.Columns(), 或者是Row.Scan()返回的deferred error
 func (r *Row) Columns() ([]string, error) {
 	if r.err != nil {
 		return []string{}, r.err
@@ -163,7 +113,7 @@ func (r *Row) Columns() ([]string, error) {
 	return r.rows.Columns()
 }
 
-// ColumnTypes returns the underlying sql.Rows.ColumnTypes(), or the deferred error
+// ColumnTypes 返回sql.Rows.ColumnTypes(), 或者是deferred error
 func (r *Row) ColumnTypes() ([]*sql.ColumnType, error) {
 	if r.err != nil {
 		return []*sql.ColumnType{}, r.err
@@ -171,31 +121,29 @@ func (r *Row) ColumnTypes() ([]*sql.ColumnType, error) {
 	return r.rows.ColumnTypes()
 }
 
-// Err returns the error encountered while scanning.
+// Err 返回扫描时遇到的错误
 func (r *Row) Err() error {
 	return r.err
 }
 
-// DB is a wrapper around sql.DB which keeps track of the driverName upon Open,
-// used mostly to automatically bind named queries using the right bindvars.
+// DB 是对sql.DB, 驱动名, 映射器的包装
 type DB struct {
 	*sql.DB
 	driverName string
 	Mapper     *Mapper
 }
 
-// NewDb returns a new sqlx DB wrapper for a pre-existing *sql.DB.  The
-// driverName of the original database is required for named query support.
+// NewDb 返回新的DB
 func NewDb(db *sql.DB, driverName string) *DB {
 	return &DB{DB: db, driverName: driverName, Mapper: mapper()}
 }
 
-// DriverName returns the driverName passed to the Open function for this DB.
+// DriverName 返回DB的驱动名
 func (db *DB) DriverName() string {
 	return db.driverName
 }
 
-// Open is the same as sql.Open, but returns an *sqlx.DB instead.
+// Open 和sql.Open一样，但是是返回*dao.DB
 func Open(driverName, dataSourceName string) (*DB, error) {
 	db, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
@@ -204,27 +152,22 @@ func Open(driverName, dataSourceName string) (*DB, error) {
 	return &DB{DB: db, driverName: driverName, Mapper: mapper()}, err
 }
 
-// MapperFunc sets a new mapper for this db using the default sqlx struct tag
-// and the provided mapper function.
+// MapperFunc 设置一个默认配置的映射器
 func (db *DB) MapperFunc(mf func(string) string) {
 	db.Mapper = NewMapperFunc("db", mf)
 }
 
-// Select using this DB.
-// Any placeholder parameters are replaced with supplied args.
+// Select 可以使所有占位符参数都将替换为提供的参数
 func (db *DB) Select(dest interface{}, query string, args ...interface{}) error {
 	return Select(db, dest, query, args...)
 }
 
-// Get using this DB.
-// Any placeholder parameters are replaced with supplied args.
-// An error is returned if the result set is empty.
+// Get 可以使所有占位符参数都将替换为提供的参数, 如果结果集为空，则返回错误。
 func (db *DB) Get(dest interface{}, query string, args ...interface{}) error {
 	return Get(db, dest, query, args...)
 }
 
-// Queryx queries the database and returns an *sqlx.Rows.
-// Any placeholder parameters are replaced with supplied args.
+// Queryx 返回*dao.Rows, 使所有占位符参数都将替换为提供的参数
 func (db *DB) Queryx(query string, args ...interface{}) (*Rows, error) {
 	r, err := db.DB.Query(query, args...)
 	if err != nil {
@@ -233,28 +176,18 @@ func (db *DB) Queryx(query string, args ...interface{}) (*Rows, error) {
 	return &Rows{Rows: r, Mapper: db.Mapper}, err
 }
 
-// QueryRowx queries the database and returns an *sqlx.Row.
-// Any placeholder parameters are replaced with supplied args.
+// QueryRowx 返回*dao.Row, 使所有占位符参数都将替换为提供的参数
 func (db *DB) QueryRowx(query string, args ...interface{}) *Row {
 	rows, err := db.DB.Query(query, args...)
 	return &Row{rows: rows, err: err, Mapper: db.Mapper}
 }
 
-// MustExec (panic) runs MustExec using this database.
-// Any placeholder parameters are replaced with supplied args.
+// MustExec (panic) 运行MustExec, 使所有占位符参数都将替换为提供的参数
 func (db *DB) MustExec(query string, args ...interface{}) sql.Result {
 	return MustExec(db, query, args...)
 }
 
-// Conn is a wrapper around sql.Conn with extra functionality
-type Conn struct {
-	*sql.Conn
-	driverName string
-	Mapper     *Mapper
-}
-
-// Rows is a wrapper around sql.Rows which caches costly reflect operations
-// during a looped StructScan
+// Rows 是sql.Rows的包装, 用来缓存在扫描期间大量的反射操作
 type Rows struct {
 	*sql.Rows
 	Mapper *Mapper
@@ -264,7 +197,7 @@ type Rows struct {
 	values  []interface{}
 }
 
-// Connect to a database and verify with a ping.
+// ConnectDB 用来连接数据库, 连接成功时返回ping值
 func ConnectDB(driverName, dataSourceName string) (*DB, error) {
 	db, err := Open(driverName, dataSourceName)
 	if err != nil {
@@ -278,11 +211,9 @@ func ConnectDB(driverName, dataSourceName string) (*DB, error) {
 	return db, nil
 }
 
-// Select executes a query using the provided Queryer, and StructScans each row
-// into dest, which must be a slice.  If the slice elements are scannable, then
-// the result set must have only one column.  Otherwise, StructScan is used.
-// The *sql.Rows are closed automatically.
-// Any placeholder parameters are replaced with supplied args.
+// Select 使用提供的 Queryer 进行查询, 扫描每一行数据到参数里面,
+// 如果切片元素是可以被扫描的, 则返回一行结果集
+// 不然 *dao.Rows 将会自动关闭
 func Select(q Queryer, dest interface{}, query string, args ...interface{}) error {
 	rows, err := q.Queryx(query, args...)
 	if err != nil {
@@ -293,18 +224,16 @@ func Select(q Queryer, dest interface{}, query string, args ...interface{}) erro
 	return scanAll(rows, dest, false)
 }
 
-// Get does a QueryRow using the provided Queryer, and scans the resulting row
-// to dest.  If dest is scannable, the result must only have one column.  Otherwise,
-// StructScan is used.  Get will return sql.ErrNoRows like row.Scan would.
-// Any placeholder parameters are replaced with supplied args.
-// An error is returned if the result set is empty.
+// Get 使用提供的 Queryer 进行查询,扫描每一行数据到参数里面,
+// 如果切片元素是可以被扫描的, 则返回一行结果集
+// 不然 Get 会返回 sql.ErrNoRows
+// 如果结果集时空的话会返回错误
 func Get(q Queryer, dest interface{}, query string, args ...interface{}) error {
 	r := q.QueryRowx(query, args...)
 	return r.scanAny(dest, false)
 }
 
-// MustExec execs the query using e and panics if there was an error.
-// Any placeholder parameters are replaced with supplied args.
+// MustExec 如果Exec出现错误会Panic
 func MustExec(e Execer, query string, args ...interface{}) sql.Result {
 	res, err := e.Exec(query, args...)
 	if err != nil {
@@ -356,12 +285,9 @@ func appendReflectSlice(args []interface{}, v reflect.Value, vlen int) []interfa
 	return args
 }
 
-// In expands slice values in args, returning the modified query string
-// and a new arg list that can be executed by a database. The `query` should
-// use the `?` bindVar.  The return value uses the `?` bindVar.
+// In 批量操作时使用, 它可以扩展args的切片值,返回修改后的查询字符串和可以被数据库执行的新参数列表
 func In(query string, args ...interface{}) (string, []interface{}, error) {
-	// argMeta stores reflect.Value and length for slices and
-	// the value itself for non-slice arguments
+	// argMeta 存储reflect.Value, 切片的长度, 非切片参数的值
 	type argMeta struct {
 		v      reflect.Value
 		i      interface{}
@@ -405,8 +331,8 @@ func In(query string, args ...interface{}) (string, []interface{}, error) {
 		}
 	}
 
-	// don't do any parsing if there aren't any slices;  note that this means
-	// some errors that we might have caught below will not be returned.
+	// 如果不是切片就不会解析
+	// 不然如果之后出现一些错误, 那么这些错误将不会被返回
 	if !anySlices {
 		return query, args, nil
 	}
@@ -430,16 +356,15 @@ func In(query string, args ...interface{}) (string, []interface{}, error) {
 		argMeta := meta[arg]
 		arg++
 
-		// not a slice, continue.
-		// our questionmark will either be written before the next expansion
-		// of a slice or after the loop when writing the rest of the query
+		// 不是切片, 继续
+		// ? 要么在下一次扩展切片之前写入, 要么在编写其余查询时在循环之后写入
 		if argMeta.length == 0 {
 			offset = offset + i + 1
 			newArgs = append(newArgs, argMeta.i)
 			continue
 		}
 
-		// write everything up to and including our ? character
+		// 写入所有数据包括 ?
 		buf.WriteString(query[:offset+i+1])
 
 		for si := 1; si < argMeta.length; si++ {
@@ -448,8 +373,7 @@ func In(query string, args ...interface{}) (string, []interface{}, error) {
 
 		newArgs = appendReflectSlice(newArgs, argMeta.v, argMeta.length)
 
-		// slice the query and reset the offset. this avoids some bookkeeping for
-		// the write after the loop
+		// 切片查询并重置偏移量, 这避免了在循环后写入一些数据
 		query = query[offset+i+1:]
 		offset = 0
 	}
@@ -504,7 +428,7 @@ func (r *Row) scanAny(dest interface{}, structOnly bool) error {
 	m := r.Mapper
 
 	fields := m.TraversalsByName(v.Type(), columns)
-	// if we are not unsafe and are missing fields, return an error
+	// 如果丢失字段
 	if f, err := missingFields(fields); err != nil {
 		return fmt.Errorf("missing destination name %s in %T", columns[f], dest)
 	}
@@ -514,11 +438,11 @@ func (r *Row) scanAny(dest interface{}, structOnly bool) error {
 	if err != nil {
 		return err
 	}
-	// scan into the struct field pointers and append to our results
+	// 扫描结构体字段的指针, 将结果添加到结果集
 	return r.Scan(values...)
 }
 
-// StructScan a single Row into dest.
+// StructScan 对参数单独的 Row
 func (r *Row) StructScan(dest interface{}) error {
 	return r.scanAny(dest, true)
 }
@@ -531,8 +455,7 @@ type rowsi interface {
 	Scan(...interface{}) error
 }
 
-// structOnlyError returns an error appropriate for type when a non-scannable
-// struct is expected but something else is given
+// structOnlyError 返回合适的错误类型
 func structOnlyError(t reflect.Type) error {
 	isStruct := t.Kind() == reflect.Struct
 	isScanner := reflect.PtrTo(t).Implements(_scannerInterface)
@@ -545,27 +468,14 @@ func structOnlyError(t reflect.Type) error {
 	return fmt.Errorf("expected a struct, but struct %s has no exported fields", t.Name())
 }
 
-// scanAll scans all rows into a destination, which must be a slice of any
-// type.  If the destination slice type is a Struct, then StructScan will be
-// used on each row.  If the destination is some other kind of base type, then
-// each row must only have one column which can scan into that type.  This
-// allows you to do something like:
-//
-//    rows, _ := db.Query("select id from people;")
-//    var ids []int
-//    scanAll(rows, &ids, false)
-//
-// and ids will be a list of the id results.  I realize that this is a desirable
-// interface to expose to users, but for now it will only be exposed via changes
-// to `Get` and `Select`.  The reason that this has been implemented like this is
-// this is the only way to not duplicate reflect work in the new API while
-// maintaining backwards compatibility.
+// scanAll 扫描所有行到 dest 中, 所以必须是任何类型的切片
+// 如果 dest 切片是结构体, 那么 StructScan 会被每一行使用
+// 如果 dest 是其他类型, 那么每一行必须有一列可以扫描到这个类型中去
 func scanAll(rows rowsi, dest interface{}, structOnly bool) error {
 	var v, vp reflect.Value
 
 	value := reflect.ValueOf(dest)
 
-	// json.Unmarshal returns errors for these
 	if value.Kind() != reflect.Ptr {
 		return errors.New("must pass a pointer, not a value, to StructScan destination")
 	}
@@ -592,7 +502,8 @@ func scanAll(rows rowsi, dest interface{}, structOnly bool) error {
 		return err
 	}
 
-	// if it's a base type make sure it only has 1 column;  if not return an error
+	// 如果这是基本数据类型, 需要保证它至少有一列数据
+	// 不然会返回错误
 	if scannable && len(columns) > 1 {
 		return fmt.Errorf("non-struct dest type %s with >1 columns (%d)", base.Kind(), len(columns))
 	}
@@ -609,14 +520,14 @@ func scanAll(rows rowsi, dest interface{}, structOnly bool) error {
 		}
 
 		fields := m.TraversalsByName(base, columns)
-		// if we are not unsafe and are missing fields, return an error
+		// 如果丢失字段, 返回错误
 		if f, err := missingFields(fields); err != nil {
 			return fmt.Errorf("missing destination name %s in %T", columns[f], dest)
 		}
 		values = make([]interface{}, len(columns))
 
 		for rows.Next() {
-			// create a new struct type (which returns PtrTo) and indirect it
+			// 创建新的结构体类型(返回 PtrTo)
 			vp = reflect.New(base)
 			v = reflect.Indirect(vp)
 
@@ -625,7 +536,7 @@ func scanAll(rows rowsi, dest interface{}, structOnly bool) error {
 				return err
 			}
 
-			// scan into the struct field pointers and append to our results
+			// 扫描结构体字段的指针, 将结果添加到结果集
 			err = rows.Scan(values...)
 			if err != nil {
 				return err
@@ -656,8 +567,7 @@ func scanAll(rows rowsi, dest interface{}, structOnly bool) error {
 	return rows.Err()
 }
 
-// reflect helpers
-
+// 判断基本数据类型
 func baseType(t reflect.Type, expected reflect.Kind) (reflect.Type, error) {
 	t = Deref(t)
 	if t.Kind() != expected {
@@ -666,12 +576,7 @@ func baseType(t reflect.Type, expected reflect.Kind) (reflect.Type, error) {
 	return t, nil
 }
 
-// fieldsByName fills a values interface with fields from the passed value based
-// on the traversals in int.  If ptrs is true, return addresses instead of values.
-// We write this instead of using FieldsByName to save allocations and map lookups
-// when iterating over many rows.  Empty traversals will get an interface pointer.
-// Because of the necessity of requesting ptrs or values, it's considered a bit too
-// specialized for inclusion in reflectx itself.
+// fieldsByTraversal 遍历字段
 func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}, ptrs bool) error {
 	v = reflect.Indirect(v)
 	if v.Kind() != reflect.Struct {
@@ -693,6 +598,7 @@ func fieldsByTraversal(v reflect.Value, traversals [][]int, values []interface{}
 	return nil
 }
 
+// 判断是否丢失了字段
 func missingFields(transversals [][]int) (field int, err error) {
 	for i, t := range transversals {
 		if len(t) == 0 {

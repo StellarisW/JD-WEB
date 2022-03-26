@@ -90,6 +90,6 @@ func (a *BaseApi) LocalUploadImg(c gin.Context, picName string) (string, error) 
 func (a *BaseApi) GetSetting() model.Setting {
 	setting := model.Setting{}
 	setting.Id = 1
-	g.DB.Get(&setting, "select * from setting where id=?", setting.Id)
+	g.DB.Where("id=?", setting.Id)
 	return setting
 }

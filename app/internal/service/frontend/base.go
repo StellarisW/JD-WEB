@@ -3,10 +3,10 @@ package frontend
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	g "main/app/global"
 	"main/app/internal/model"
 	"main/utils"
-	dao "main/utils/sql"
 	"strings"
 	"time"
 )
@@ -19,11 +19,7 @@ func (s *sBase) InitTopMenu(rs *utils.RedisStore) (topMenu []model.Menu, err err
 	if hasTopMenu := rs.Get(rs.PreKey+"topMenu", &topMenu); hasTopMenu == true {
 		return topMenu, nil
 	} else {
-		err := g.DB.Select(&topMenu,
-			"select * from menu where status=1 and position=1 order by sort desc")
-		if err != nil {
-			return nil, err
-		}
+		g.DB.Where("status=1 AND position=1").Order("sort desc").Find(&topMenu)
 		rs.Set("topMenu", topMenu)
 		return topMenu, nil
 	}
@@ -33,21 +29,12 @@ func (s *sBase) InitProductCate(rs *utils.RedisStore) (productCate []model.Produ
 	if hasProductCate := rs.Get(rs.PreKey+"productCate", &productCate); hasProductCate == true {
 		return productCate, nil
 	} else {
-		var productCateItem []model.ProductCate
-		err := g.DB.Select(&productCateItem,
-			"select * from product_cate where status=1 order by sort desc")
-		if err != nil {
-			return nil, err
-		}
-		err = g.DB.Select(&productCate,
-			"select * from product_cate where pid=0 and status=1 order by sort desc")
-		if err != nil {
-			return nil, err
-		}
-		for i, cate := range productCate {
-			cate.ProductCateItem = productCateItem
-			productCate[i] = cate
-		}
+		g.DB.Preload("ProductCateItem",
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("product_cate.status=1").
+					Order("product_cate.sort DESC")
+			}).Where("pid=0 AND status=1").Order("sort desc").
+			Find(&productCate)
 		rs.Set("productCate", productCate)
 		return productCate, nil
 	}
@@ -58,25 +45,15 @@ func (s *sBase) InitMiddleMenu(rs *utils.RedisStore) (middleMenu []model.Menu, e
 	if hasMiddleMenu := rs.Get(rs.PreKey+"middleMenu", &middleMenu); hasMiddleMenu == true {
 		return middleMenu, nil
 	} else {
-		err := g.DB.Select(&middleMenu,
-			"select * from menu where status=1 and position=2 order by sort desc")
-		if err != nil {
-			return nil, err
-		}
+		g.DB.Where("status=1 AND position=2").Order("sort desc").Find(&middleMenu)
 		g.Logger.Debugf("%v\n", time.Now())
 		// 获取关联商品 TODO:获取时间长，待优化
 		for i := 0; i < len(middleMenu); i++ {
 			middleMenu[i].Relation = strings.ReplaceAll(middleMenu[i].Relation, ". ", ",")
 			relation := strings.Split(middleMenu[i].Relation, ",")
 			var product []model.Product
-			query, args, err := dao.In("select * from product where id in (?) limit 6", relation)
-			if err != nil {
-				return nil, err
-			}
-			err = g.DB.Select(&product, query, args...)
-			if err != nil {
-				return nil, err
-			}
+			g.DB.Where("id in (?)", relation).Limit(6).Order("sort ASC").
+				Select("id,title,product_img,price").Find(&product)
 			middleMenu[i].ProductItem = product
 			g.Logger.Debugf("index:%v time:%v\n", i, time.Now())
 		}
